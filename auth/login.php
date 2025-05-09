@@ -5,37 +5,58 @@ include('../config/db.php');
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = md5($_POST['password']); // simple md5 encryption (matches our SQL)
+    if (isset($_POST['email']) && isset($_POST['password'])) {
+        $email = $_POST['email'];
+        $password = $_POST['password'];
 
-    $sql = "SELECT * FROM users WHERE email='$email' AND password='$password'";
-    $result = $conn->query($sql);
+        $sql = "SELECT * FROM users WHERE email = '$email'";
+        $result = $conn->query($sql);
 
-    if ($result->num_rows == 1) {
-        $user = $result->fetch_assoc();
-        $_SESSION['email'] = $user['email'];
-        $_SESSION['role'] = $user['role'];
+        if ($result && $result->num_rows == 1) {
+            $user = $result->fetch_assoc();
 
-        // Role-based Redirect
-        switch ($user['role']) {
-            case 'admin':
-                header("Location: ../views/admin/dashboard.php");
-                break;
-            case 'doctor':
-                header("Location: ../views/doctor/dashboard.php");
-                break;
-            case 'nurse':
-                header("Location: ../views/nurse/dashboard.php");
-                break;
-            case 'cashier':
-                header("Location: ../views/cashier/dashboard.php");
-                break;
-            case 'pharmacist':
-                header("Location: ../views/pharmacist/dashboard.php");
-                break;
+            if (password_get_info($user['password'])['algo'] == 0) {
+                if ($password === $user['password']) {
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role'] = $user['role'];
+                }
+            } else {
+                if (password_verify($password, $user['password'])) {
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role'] = $user['role'];
+                }
+            }
+
+            if (isset($_SESSION['username'])) {
+                switch ($_SESSION['role']) {
+                    case 'admin':
+                        header("Location: ../views/admin/dashboard.php");
+                        break;
+                    case 'doctor':
+                        header("Location: ../views/doctor/dashboard.php");
+                        break;
+                    case 'nurse':
+                        header("Location: ../views/nurse/dashboard.php");
+                        break;
+                    case 'cashier':
+                        header("Location: ../views/cashier/dashboard.php");
+                        break;
+                    case 'pharmacist':
+                        header("Location: ../views/pharmacist/dashboard.php");
+                        break;
+                    default:
+                        header("Location: ../views/admin/dashboard.php");
+                        break;
+                }
+                exit();
+            } else {
+                $error = "Invalid email or password!";
+            }
+        } else {
+            $error = "Invalid email or password!";
         }
     } else {
-        $error = "Invalid username or password!";
+        $error = "Please fill in both fields!";
     }
 }
 ?>
